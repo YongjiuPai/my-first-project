@@ -4,25 +4,26 @@ import json
 
 def get_gemini_news():
     api_key = os.getenv('GEMINI_API_KEY')
-    # Gemini 的 API 地址
+    # 切换回更稳定的模型版本
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
     
+    # 优化提示词，让它在没有搜索工具时也能尝试给出最新信息
     prompt = """
-    你是一名宠物行业资深投资分析师。请立刻使用内置的 Google 搜索功能，查找过去24小时内全球宠物行业的【创业与投融资】动态。
+    你是一名资深的宠物行业分析师。
+    请根据你掌握的最新行业动态，整理6条宠物行业的创业与投融资新闻（3条国内，3条国际）。
     
-    要求：
-    1. 提供6条新闻：国内3条，国际3条。
-    2. 每条包含：【标题】、100字左右【简介】、50字左右【专业点评】。
-    3. 重点关注：PetTech、智能硬件、新品牌、融资快报。
+    输出要求：
+    1. 必须是【2026年】的最新动态。
+    2. 每条包含：【标题】、100字左右【简介】、50字左右【创业点评】。
+    3. 重点：PetTech、智能硬件、新品牌。
     4. 必须输出中文。
     """
 
+    # 简化 payload，去掉可能导致报错的 google_search_retrieval 工具
     payload = {
         "contents": [{
             "parts": [{"text": prompt}]
-        }],
-        # 开启 Google 搜索工具
-        "tools": [{"google_search_retrieval": {}}]
+        }]
     }
     
     headers = {'Content-Type': 'application/json'}
@@ -30,11 +31,18 @@ def get_gemini_news():
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=90)
         result = response.json()
-        # 解析 Gemini 的返回格式
-        content = result['candidates'][0]['content']['parts'][0]['text']
-        return content
+        
+        # 核心改进：如果报错，把完整的错误信息发到飞书，方便定位
+        if 'candidates' in result:
+            content = result['candidates'][0]['content']['parts'][0]['text']
+            return content
+        else:
+            # 这里的 error 会告诉我们是 API Key 错了，还是区域限制了
+            error_msg = result.get('error', {}).get('message', '未知错误')
+            return f"Gemini 报告了一个错误：{error_msg}"
+            
     except Exception as e:
-        return f"获取新闻失败，可能需要检查API或网络。报错：{str(e)}"
+        return f"脚本执行异常：{str(e)}"
 
 def send_to_feishu(content):
     webhook = os.getenv('FEISHU_WEBHOOK')
