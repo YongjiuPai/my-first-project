@@ -1,6 +1,6 @@
 import os
-  import requests
-  import json
+import requests
+import json
 
   def get_groq_news():
       api_key = os.getenv('GROQ_API_KEY')
