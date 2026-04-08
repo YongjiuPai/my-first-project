@@ -5,7 +5,7 @@ import json
 def get_gemini_news():
     api_key = os.getenv('GEMINI_API_KEY')
     # 切换回更稳定的模型版本
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
     
     # 优化提示词，让它在没有搜索工具时也能尝试给出最新信息
     prompt = """
